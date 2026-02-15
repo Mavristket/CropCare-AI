@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fertilizer Prediction - AI Fertilizer Recommendation</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="container">
+                <div class="logo">
+                    <h1>🌱 Crop Detection System</h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/crop-detection">Crop Detection</a></li>
+                    <li><a href="/fertilizer" class="active">Fertilizer Prediction</a></li>
+                    <li><a href="/crop-recommendation">Crop Recommendation</a></li>
+                    <li><a href="/contact">Contact</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="fertilizer-section">
+            <div class="container">
+                <h2>Fertilizer Prediction</h2>
+                <p>Enter soil and environmental conditions to get fertilizer recommendations</p>
+                
+                <form id="fertilizerForm" class="fertilizer-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="nitrogen">Nitrogen (N) ppm</label>
+                            <input type="number" id="nitrogen" name="nitrogen" step="0.1" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="phosphorus">Phosphorus (P) ppm</label>
+                            <input type="number" id="phosphorus" name="phosphorus" step="0.1" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="potassium">Potassium (K) ppm</label>
+                            <input type="number" id="potassium" name="potassium" step="0.1" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="temperature">Temperature (°C)</label>
+                            <input type="number" id="temperature" name="temperature" step="0.1" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="humidity">Humidity (%)</label>
+                            <input type="number" id="humidity" name="humidity" step="0.1" min="0" max="100" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="moisture">Moisture</label>
+                            <input type="number" id="moisture" name="moisture" step="0.1" min="0" max="100" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="soil_type">Soil Type</label>
+                            <select id="soil_type" name="soil_type" required>
+                                <option value="">Select soil type</option>
+                                <option value="Black">Black</option>
+                                <option value="Clayey">Clayey</option>
+                                <option value="Loamy">Loamy</option>
+                                <option value="Red">Red</option>
+                                <option value="Sandy">Sandy</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="crop_type">Crop Type</label>
+                            <select id="crop_type" name="crop_type" required>
+                                <option value="">Select crop type</option>
+                                <option value="Barley">Barley</option>
+                                <option value="Cotton">Cotton</option>
+                                <option value="Ground Nuts">Ground Nuts</option>
+                                <option value="Maize">Maize</option>
+                                <option value="Millets">Millets</option>
+                                <option value="Oil seeds">Oil seeds</option>
+                                <option value="Paddy">Paddy</option>
+                                <option value="Pulses">Pulses</option>
+                                <option value="Sugarcane">Sugarcane</option>
+                                <option value="Tobacco">Tobacco</option>
+                                <option value="Wheat">Wheat</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Get Fertilizer Recommendation</button>
+                </form>
+
+                <div id="fertilizerResult" class="result-container" style="display: none;">
+                    <h3>Fertilizer Recommendation</h3>
+                    <div id="fertilizerResultContent"></div>
+                </div>
+
+                <div id="fertilizerLoading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Processing...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Crop Detection System. All rights reserved.</p>
+            <p>Contact: <a href="mailto:gaikwadb602@gmail.com">gaikwadb602@gmail.com</a></p>
+        </div>
+    </footer>
+
+    <script>
+        const form = document.getElementById('fertilizerForm');
+        const result = document.getElementById('fertilizerResult');
+        const loading = document.getElementById('fertilizerLoading');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const data = {
+                nitrogen: parseFloat(formData.get('nitrogen')),
+                phosphorus: parseFloat(formData.get('phosphorus')),
+                potassium: parseFloat(formData.get('potassium')),
+                temperature: parseFloat(formData.get('temperature')),
+                humidity: parseFloat(formData.get('humidity')),
+                moisture: parseFloat(formData.get('moisture')),
+                soil_type: formData.get('soil_type'),
+                crop_type: formData.get('crop_type')
+            };
+
+            loading.style.display = 'block';
+            result.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/fertilizer-predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(data)
+                });
+
+                const responseData = await response.json();
+                displayFertilizerResult(responseData);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+
+        function displayFertilizerResult(data) {
+            const resultContent = document.getElementById('fertilizerResultContent');
+            const input = data.input_data || data;
+            
+            if (data.error || !data.success) {
+                resultContent.innerHTML = `
+                    <div class="result-card error">
+                        <p><strong>Error:</strong> ${data.message || 'Something went wrong. Please try again.'}</p>
+                    </div>
+                `;
+            } else {
+                const rec = data.recommendation || '';
+                const recHtml = rec.replace(/\n/g, '<br>').replace(/\*\*/g, '');
+                resultContent.innerHTML = `
+                    <div class="result-card">
+                        <h4>Fertilizer Recommendation (ML Model)</h4>
+                        <div class="fertilizer-recommendation">${recHtml || 'No recommendation available.'}</div>
+                        <div class="input-summary">
+                            <h5>Input Summary:</h5>
+                            <ul>
+                                <li>Nitrogen: ${input.nitrogen} ppm</li>
+                                <li>Phosphorus: ${input.phosphorus} ppm</li>
+                                <li>Potassium: ${input.potassium} ppm</li>
+                                <li>Temperature: ${input.temperature}°C</li>
+                                <li>Humidity: ${input.humidity}%</li>
+                                <li>Moisture: ${input.moisture}</li>
+                                <li>Soil Type: ${input.soil_type}</li>
+                                <li>Crop Type: ${input.crop_type}</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            result.style.display = 'block';
+        }
+    </script>
+
+    <div style="text-align: center; margin: 20px; font-size: 24px;">
+        Shri Swami Samarth 🙏
+    </div>
+
+</body>
+</html>

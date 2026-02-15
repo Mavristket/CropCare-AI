@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crop Detection - Plant Disease Detection</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="container">
+                <div class="logo">
+                    <h1>🌱 Crop Detection System</h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/crop-detection" class="active">Crop Detection</a></li>
+                    <li><a href="/fertilizer">Fertilizer Prediction</a></li>
+                    <li><a href="/crop-recommendation">Crop Recommendation</a></li>
+                    <li><a href="/contact">Contact</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="detection-section">
+            <div class="container">
+                <h2>Plant Disease Detection</h2>
+                <p>Upload an image of your crop leaf to detect diseases</p>
+                
+                <div class="upload-container">
+                    <div class="upload-box" id="uploadBox">
+                        <input type="file" id="imageInput" accept="image/*" hidden>
+                        <div class="upload-content">
+                            <div class="upload-icon">📷</div>
+                            <p>Click to upload or drag and drop</p>
+                            <p class="upload-hint">PNG, JPG, JPEG up to 10MB</p>
+                        </div>
+                    </div>
+                    
+                    <div id="imagePreview" class="image-preview" style="display: none;">
+                        <img id="previewImg" src="" alt="Preview">
+                        <button class="btn-remove" onclick="removeImage()">✕</button>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="predictBtn" onclick="predictDisease()" disabled>
+                    Detect Disease
+                </button>
+
+                <div id="result" class="result-container" style="display: none;">
+                    <h3>Detection Result</h3>
+                    <div id="resultContent"></div>
+                </div>
+
+                <div id="loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Analyzing image...</p>
+                </div>
+
+                <!-- History Section -->
+                <div class="history-section">
+                    <h3>Prediction History</h3>
+                    <div id="historyContent">
+                        <p>Loading history...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Crop Detection System. All rights reserved.</p>
+            <p>Contact: <a href="mailto:gaikwadb602@gmail.com">gaikwadb602@gmail.com</a></p>
+        </div>
+    </footer>
+
+    <script>
+        const uploadBox = document.getElementById('uploadBox');
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        const predictBtn = document.getElementById('predictBtn');
+        const result = document.getElementById('result');
+        const loading = document.getElementById('loading');
+        const historyContent = document.getElementById('historyContent');
+
+        // Load history on page load
+        document.addEventListener('DOMContentLoaded', loadHistory);
+
+        uploadBox.addEventListener('click', () => imageInput.click());
+        
+        uploadBox.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadBox.classList.add('drag-over');
+        });
+
+        uploadBox.addEventListener('dragleave', () => {
+            uploadBox.classList.remove('drag-over');
+        });
+
+        uploadBox.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadBox.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                imagePreview.style.display = 'block';
+                uploadBox.style.display = 'none';
+                predictBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            imagePreview.style.display = 'none';
+            uploadBox.style.display = 'block';
+            imageInput.value = '';
+            predictBtn.disabled = true;
+            result.style.display = 'none';
+        }
+
+        async function predictDisease() {
+            const file = imageInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            predictBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayResult(data);
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+                predictBtn.disabled = false;
+            }
+        }
+
+        function displayResult(data) {
+            const resultContent = document.getElementById('resultContent');
+            const details = data.details || {};
+            
+            resultContent.innerHTML = `
+                <div class="result-card">
+                    <div class="result-header">
+                        <h4>🌱 ${details.plant || 'Unknown Plant'}</h4>
+                        <span class="confidence-badge">Confidence: ${data.confidence}%</span>
+                    </div>
+                    
+                    <div class="disease-info">
+                        <h5>Detected Condition: ${details.disease || data.prediction.replace(/_/g, ' ').replace(/___/g, ' - ')}</h5>
+                        <p class="description"><strong>Description:</strong> ${details.description || 'No description available'}</p>
+                        <p class="symptoms"><strong>Symptoms:</strong> ${details.symptoms || 'No symptoms information available'}</p>
+                        <p class="treatment"><strong>Recommended Treatment:</strong> ${details.treatment || 'Consult agricultural expert'}</p>
+                    </div>
+                    
+                    <div class="prediction-details">
+                        <h6>All Predictions:</h6>
+                        <div class="predictions-list">
+                            ${Object.entries(data.all_predictions || {})
+                                .sort(([,a], [,b]) => b - a)
+                                .slice(0, 5)
+                                .map(([className, confidence]) => `
+                                    <div class="prediction-item ${className === data.prediction ? 'active' : ''}">
+                                        <span class="class-name">${className.replace(/_/g, ' ').replace(/___/g, ' - ')}</span>
+                                        <span class="class-confidence">${confidence.toFixed(2)}%</span>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            result.style.display = 'block';
+            // Reload history after new prediction
+            loadHistory();
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const data = await response.json();
+                
+                if (data.history && data.history.length > 0) {
+                    historyContent.innerHTML = data.history.map(item => {
+                        const details = item.details || {};
+                        const date = new Date(item.timestamp * 1000).toLocaleString();
+                        
+                        return `
+                            <div class="history-item">
+                                <div class="history-image">
+                                    <img src="${item.image_path}" alt="Uploaded image" onclick="showFullImage('${item.image_path}')">
+                                </div>
+                                <div class="history-details">
+                                    <div class="history-header">
+                                        <h5>${details.plant || 'Unknown Plant'} - ${details.disease || item.prediction.replace(/_/g, ' ').replace(/___/g, ' - ')}</h5>
+                                        <span class="history-confidence">${item.confidence}%</span>
+                                    </div>
+                                    <p class="history-date">${date}</p>
+                                    <p class="history-filename">${item.filename}</p>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    historyContent.innerHTML = '<p>No prediction history available</p>';
+                }
+            } catch (error) {
+                historyContent.innerHTML = '<p>Error loading history</p>';
+                console.error('Error loading history:', error);
+            }
+        }
+
+        function showFullImage(imagePath) {
+            const modal = document.createElement('div');
+            modal.className = 'image-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close-modal" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                    <img src="${imagePath}" alt="Full size image">
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            modal.onclick = function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            };
+        }
+    </script>
+
+    <div style="text-align: center; margin: 20px; font-size: 24px;">
+        Shri Swami Samarth 🙏
+    </div>
+
+</body>
+</html>
