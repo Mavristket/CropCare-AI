@@ -26,7 +26,10 @@ app = FastAPI()
 DEBUG_LOG_PATH = r"c:\Users\gaikw\OneDrive\Desktop\Final_model\.cursor\debug.log"
 
 # Ensure .cursor directory exists
-os.makedirs(os.path.dirname(DEBUG_LOG_PATH), exist_ok=True)
+log_dir = os.path.dirname(DEBUG_LOG_PATH)
+
+if log_dir:
+    os.makedirs(log_dir, exist_ok=True)
 
 
 def agent_debug_log(
